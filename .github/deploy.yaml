@@ -1,3 +1,5 @@
+# yaml-language-server: $schema=https://json.schemastore.org/github-workflow.json
+
 name: Build and Deploy to AKS
 
 on:
@@ -11,61 +13,23 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    # =========================
-    # Checkout source
-    # =========================
-    - name: Checkout repository
-      uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
 
-    # =========================
-    # Azure Login
-    # =========================
-    - name: Azure Login
-      uses: azure/login@v2
-      with:
-        creds: ${{ secrets.AZURE_CREDENTIALS }}
+      - name: Azure Login
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
 
-    # =========================
-    # Login to ACR
-    # =========================
-    - name: Login to ACR
-      run: az acr login --name acrforksdemo1
+      - name: Login to ACR
+        run: az acr login --name acrforksdemo1
 
-    # =========================
-    # Build & Push APP1
-    # =========================
-    - name: Build and Push APP1
-      run: |
-        docker build \
-          -f docker/Dockerfile.app1 \
-          -t acrforksdemo1.azurecr.io/app1:${{ github.sha }} .
-        docker push acrforksdemo1.azurecr.io/app1:${{ github.sha }}
+      - name: Build & Push APP1
+        run: |
+          docker build -f docker/Dockerfile.app1 -t acrforksdemo1.azurecr.io/app1:${{ github.sha }} .
+          docker push acrforksdemo1.azurecr.io/app1:${{ github.sha }}
 
-    # =========================
-    # Build & Push APP2
-    # =========================
-    - name: Build and Push APP2
-      run: |
-        docker build \
-          -f docker/Dockerfile.app2 \
-          -t acrforksdemo1.azurecr.io/app2:${{ github.sha }} .
-        docker push acrforksdemo1.azurecr.io/app2:${{ github.sha }}
-
-    # =========================
-    # Deploy to AKS
-    # =========================
-    - name: Deploy to AKS
-      run: |
-        az aks get-credentials \
-          --resource-group AKSMM_group \
-          --name AKSMM \
-          --overwrite-existing
-
-        kubectl set image deployment/app1 \
-          app1=acrforksdemo1.azurecr.io/app1:${{ github.sha }}
-
-        kubectl set image deployment/app2 \
-          app2=acrforksdemo1.azurecr.io/app2:${{ github.sha }}
-
-        kubectl rollout status deployment/app1
-        kubectl rollout status deployment/app2
+      - name: Build & Push APP2
+        run: |
+          docker build -f docker/Dockerfile.app2 -t acrforksdemo1.azurecr.io/app2:${{ github.sha }} .
+          docker push acrforksdemo1.azurecr.io/app2:${{ github.sha }}
