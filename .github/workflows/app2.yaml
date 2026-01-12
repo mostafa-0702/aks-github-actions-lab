@@ -7,31 +7,31 @@ on:
     paths:
       - "apps/app2/**"
       - "docker/Dockerfile.app2"
+      - "k8s/app2/**"
       - ".github/workflows/app2.yaml"
   workflow_dispatch:
 
 jobs:
-  deploy-app1:
+  deploy-app2:
     runs-on: ubuntu-latest
 
     steps:
     - uses: actions/checkout@v4
 
-    - name: Azure Login
-      uses: azure/login@v2
+    - uses: azure/login@v2
       with:
         creds: ${{ secrets.AZURE_CREDENTIALS }}
 
-    - name: Login to ACR
-      run: az acr login --name acrforksdemo1
+    - run: az acr login --name acrforksdemo1
 
-    - name: Build & Push APP2
+    - name: Build & Push APP2 image
       run: |
-        docker build -f docker/Dockerfile.app2 \
+        docker build \
+          -f docker/Dockerfile.app2 \
           -t acrforksdemo1.azurecr.io/app2:${{ github.sha }} .
         docker push acrforksdemo1.azurecr.io/app2:${{ github.sha }}
 
-    - name: Deploy APP2
+    - name: Deploy APP2 to AKS
       run: |
         az aks get-credentials \
           --resource-group AKSMM_group \
@@ -39,6 +39,7 @@ jobs:
           --overwrite-existing
 
         kubectl set image deployment/app2 \
-          app1=acrforksdemo1.azurecr.io/app2:${{ github.sha }}
+          app2=acrforksdemo1.azurecr.io/app2:${{ github.sha }}
 
         kubectl rollout status deployment/app2
+
