@@ -36,8 +36,8 @@ jobs:
     - name: Deploy to AKS
       run: |
         az aks get-credentials \
-          --resource-group <RG_AKS> \
-          --name <AKS_NAME> \
+          --resource-group AKSMM_group \
+          --name AKSMM \
           --overwrite-existing
 
         kubectl set image deployment/app1 app1=acrforksdemo1.azurecr.io/app1:${{ github.sha }}
