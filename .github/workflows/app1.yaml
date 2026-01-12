@@ -7,7 +7,6 @@ on:
     paths:
       - "apps/app1/**"
       - "docker/Dockerfile.app1"
-      - "k8s/app1/**"
       - ".github/workflows/app1.yaml"
   workflow_dispatch:
 
@@ -16,7 +15,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout
+    - name: Checkout repository
       uses: actions/checkout@v4
 
     - name: Azure Login
@@ -27,12 +26,16 @@ jobs:
     - name: Login to ACR
       run: az acr login --name acrforksdemo1
 
-    - name: Build & Push APP1 image
+    - name: Build & Push APP1
       run: |
-        docker build \
-          -f docker/Dockerfile.app1 \
-          -t acrforksdemo1.azurecr.io/app1:${{ github.sha }} .
-        docker push acrforksdemo1.azurecr.io/app1:${{ github.sha }}
+        TAG=${{ github.run_number }}
+
+        docker build -f docker/Dockerfile.app1 \
+          -t acrforksdemo1.azurecr.io/app1:$TAG \
+          -t acrforksdemo1.azurecr.io/app1:latest .
+
+        docker push acrforksdemo1.azurecr.io/app1:$TAG
+        docker push acrforksdemo1.azurecr.io/app1:latest
 
     - name: Deploy APP1 to AKS
       run: |
@@ -42,6 +45,6 @@ jobs:
           --overwrite-existing
 
         kubectl set image deployment/app1 \
-          app1=acrforksdemo1.azurecr.io/app1:${{ github.sha }}
+          app1=acrforksdemo1.azurecr.io/app1:${{ github.run_number }}
 
         kubectl rollout status deployment/app1
