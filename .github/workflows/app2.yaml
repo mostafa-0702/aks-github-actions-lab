@@ -1,0 +1,44 @@
+name: Deploy APP2
+
+on:
+  push:
+    branches:
+      - master
+    paths:
+      - "apps/app2/**"
+      - "docker/app2.Dockerfile"
+      - ".github/workflows/app2.yaml"
+  workflow_dispatch:
+
+jobs:
+  deploy-app1:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Azure Login
+      uses: azure/login@v2
+      with:
+        creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+    - name: Login to ACR
+      run: az acr login --name acrforksdemo1
+
+    - name: Build & Push APP2
+      run: |
+        docker build -f docker/app2.Dockerfile \
+          -t acrforksdemo1.azurecr.io/app2:${{ github.sha }} .
+        docker push acrforksdemo1.azurecr.io/app2:${{ github.sha }}
+
+    - name: Deploy APP2
+      run: |
+        az aks get-credentials \
+          --resource-group AKSMM_group \
+          --name AKSMM \
+          --overwrite-existing
+
+        kubectl set image deployment/app2 \
+          app1=acrforksdemo1.azurecr.io/app2:${{ github.sha }}
+
+        kubectl rollout status deployment/app2
