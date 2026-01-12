@@ -14,6 +14,6 @@ spec:
     spec:
       containers:
       - name: app1
-        image: acrforksdemo1.azurecr.io/app1:latest
+        image: acrforksdemo1.azurecr.io/app1:5
         ports:
         - containerPort: 80
