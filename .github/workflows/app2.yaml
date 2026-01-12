@@ -6,7 +6,7 @@ on:
       - master
     paths:
       - "apps/app2/**"
-      - "docker/app2.Dockerfile"
+      - "docker/Dockerfile.app2"
       - ".github/workflows/app2.yaml"
   workflow_dispatch:
 
@@ -27,7 +27,7 @@ jobs:
 
     - name: Build & Push APP2
       run: |
-        docker build -f docker/app2.Dockerfile \
+        docker build -f docker/Dockerfile.app2 \
           -t acrforksdemo1.azurecr.io/app2:${{ github.sha }} .
         docker push acrforksdemo1.azurecr.io/app2:${{ github.sha }}
 
