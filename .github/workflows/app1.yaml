@@ -1,4 +1,4 @@
-name: Deploy APP1 (DEV)
+name: Deploy APP1
 
 on:
   push:
@@ -7,20 +7,15 @@ on:
     paths:
       - "apps/app1/**"
       - "docker/Dockerfile.app1"
-      - "helm-app1/**"
       - ".github/workflows/app1.yaml"
-
   workflow_dispatch:
-
-env:
-  IMAGE_TAG: ${{ github.run_number }}
 
 jobs:
   deploy-app1:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout
+    - name: Checkout repository
       uses: actions/checkout@v4
 
     - name: Azure Login
@@ -33,24 +28,23 @@ jobs:
 
     - name: Build & Push APP1
       run: |
-        docker build \
-          -f docker/Dockerfile.app1 \
-          -t acrforksdemo1.azurecr.io/app1:${IMAGE_TAG} \
-          -t acrforksdemo1.azurecr.io/app1:latest \
-          .
+        TAG=${{ github.run_number }}
 
-        docker push acrforksdemo1.azurecr.io/app1:${IMAGE_TAG}
+        docker build -f docker/Dockerfile.app1 \
+          -t acrforksdemo1.azurecr.io/app1:$TAG \
+          -t acrforksdemo1.azurecr.io/app1:latest .
+
+        docker push acrforksdemo1.azurecr.io/app1:$TAG
         docker push acrforksdemo1.azurecr.io/app1:latest
 
-    - name: Deploy APP1 to AKS (DEV)
+    - name: Deploy APP1 to AKS
       run: |
         az aks get-credentials \
           --resource-group AKSMM_group \
           --name AKSMM \
           --overwrite-existing
 
-        kubectl set image deployment/dev-app1 \
-          app1=acrforksdemo1.azurecr.io/app1:${IMAGE_TAG} \
-          -n dev
+        kubectl set image deployment/app1 \
+          app1=acrforksdemo1.azurecr.io/app1:${{ github.run_number }}
 
-        kubectl rollout status deployment/dev-app1 -n dev
+        kubectl rollout status deployment/app1
