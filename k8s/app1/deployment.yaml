@@ -1,4 +1,4 @@
-name: Deploy APP1 to DEV
+name: Deploy APP1 (DEV)
 
 on:
   push:
@@ -8,31 +8,51 @@ on:
       - "apps/app1/**"
       - "docker/Dockerfile.app1"
       - "helm-app1/**"
-      - ".github/workflows/app1-dev.yaml"
+      - ".github/workflows/app1.yaml"
+
+  workflow_dispatch:
 
 jobs:
-  deploy-dev:
+  deploy-app1:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout code
+    # =========================
+    # Checkout
+    # =========================
+    - name: Checkout source
       uses: actions/checkout@v4
 
+    # =========================
+    # Azure Login
+    # =========================
     - name: Azure Login
       uses: azure/login@v2
       with:
         creds: ${{ secrets.AZURE_CREDENTIALS }}
 
+    # =========================
+    # Login to ACR
+    # =========================
     - name: Login to ACR
       run: az acr login --name acrforksdemo1
 
-    - name: Build & Push image (DEV)
+    # =========================
+    # Build & Push APP1
+    # =========================
+    - name: Build and Push APP1 image
       run: |
-        docker build -f docker/Dockerfile.app1 \
-          -t acrforksdemo1.azurecr.io/app1:dev .
-        docker push acrforksdemo1.azurecr.io/app1:dev
+        docker build \
+          -f docker/Dockerfile.app1 \
+          -t acrforksdemo1.azurecr.io/app1:${{ github.sha }} \
+          .
 
-    - name: Deploy to DEV with Helm
+        docker push acrforksdemo1.azurecr.io/app1:${{ github.sha }}
+
+    # =========================
+    # Deploy with Helm (DEV)
+    # =========================
+    - name: Deploy APP1 to DEV with Helm
       run: |
         az aks get-credentials \
           --resource-group AKSMM_group \
@@ -41,7 +61,8 @@ jobs:
 
         helm upgrade --install dev-app1 helm-app1 \
           -n dev \
-          -f helm-app1/values-dev.yaml \
-          --wait
+          --create-namespace \
+          --set image.repository=acrforksdemo1.azurecr.io/app1 \
+          --set image.tag=${{ github.sha }}
 
-
+        kubectl rollout status deployment/dev-app1 -n dev
