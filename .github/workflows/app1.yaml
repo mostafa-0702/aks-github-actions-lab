@@ -1,4 +1,4 @@
-name: Deploy APP1
+name: Deploy APP1 (DEV)
 
 on:
   push:
@@ -7,7 +7,9 @@ on:
     paths:
       - "apps/app1/**"
       - "docker/Dockerfile.app1"
+      - "helm-app1/**"
       - ".github/workflows/app1.yaml"
+
   workflow_dispatch:
 
 jobs:
@@ -15,36 +17,54 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout repository
+    # =========================
+    # Checkout
+    # =========================
+    - name: Checkout source
       uses: actions/checkout@v4
 
+    # =========================
+    # Azure Login
+    # =========================
     - name: Azure Login
       uses: azure/login@v2
       with:
         creds: ${{ secrets.AZURE_CREDENTIALS }}
 
+    # =========================
+    # Login to ACR
+    # =========================
     - name: Login to ACR
       run: az acr login --name acrforksdemo1
 
-    - name: Build & Push APP1
+    # =========================
+    # Build & Push APP1
+    # =========================
+    - name: Build and Push APP1 image
       run: |
         TAG=${{ github.run_number }}
 
-        docker build -f docker/Dockerfile.app1 \
+        docker build \
+          -f docker/Dockerfile.app1 \
           -t acrforksdemo1.azurecr.io/app1:$TAG \
-          -t acrforksdemo1.azurecr.io/app1:latest .
+          -t acrforksdemo1.azurecr.io/app1:latest \
+          .
 
         docker push acrforksdemo1.azurecr.io/app1:$TAG
         docker push acrforksdemo1.azurecr.io/app1:latest
 
-    - name: Deploy APP1 to AKS
+    # =========================
+    # Deploy to AKS (DEV)
+    # =========================
+    - name: Deploy APP1 to AKS (DEV)
       run: |
         az aks get-credentials \
           --resource-group AKSMM_group \
           --name AKSMM \
           --overwrite-existing
 
-        kubectl set image deployment/app1 \
-          app1=acrforksdemo1.azurecr.io/app1:${{ github.run_number }}
+        kubectl set image deployment/dev-app1 \
+          app1=acrforksdemo1.azurecr.io/app1:$TAG \
+          -n dev
 
-        kubectl rollout status deployment/app1
+        kubectl rollout status deployment/dev-app1 -n dev
