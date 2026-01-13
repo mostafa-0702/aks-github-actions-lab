@@ -2,5 +2,5 @@ replicaCount: 1
 
 image:
   repository: acrforksdemo1.azurecr.io/app1
-  tag: dev
+  tag: 18
 
