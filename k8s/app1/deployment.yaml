@@ -1,21 +1,45 @@
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: app1
-spec:
-  replicas: 1
-  selector:
-    matchLabels:
-      app: app1
-  template:
-    metadata:
-      labels:
-        app: app1
-    spec:
-      containers:
-      - name: app1
-        image: acrforksdemo1.azurecr.io/app1:5
-        imagePullPolicy: Always
-        ports:
-        - containerPort: 80
+name: Deploy APP1 to DEV
 
+on:
+  push:
+    branches:
+      - master
+    paths:
+      - "apps/app1/**"
+      - "docker/Dockerfile.app1"
+      - "helm-app1/**"
+      - ".github/workflows/app1-dev.yaml"
+
+jobs:
+  deploy-dev:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Azure Login
+      uses: azure/login@v2
+      with:
+        creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+    - name: Login to ACR
+      run: az acr login --name acrforksdemo1
+
+    - name: Build & Push image (DEV)
+      run: |
+        docker build -f docker/Dockerfile.app1 \
+          -t acrforksdemo1.azurecr.io/app1:dev .
+        docker push acrforksdemo1.azurecr.io/app1:dev
+
+    - name: Deploy to DEV with Helm
+      run: |
+        az aks get-credentials \
+          --resource-group AKSMM_group \
+          --name AKSMM \
+          --overwrite-existing
+
+        helm upgrade --install dev-app1 helm-app1 \
+          -n dev \
+          -f helm-app1/values-dev.yaml \
+          --wait
