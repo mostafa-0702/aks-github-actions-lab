@@ -1,5 +1,6 @@
-replicaCount: 1
-
 image:
   repository: acrforksdemo1.azurecr.io/app1
-  tag: 18
+  tag: "18"
+
+ingress:
+  host: uat.lll.one
