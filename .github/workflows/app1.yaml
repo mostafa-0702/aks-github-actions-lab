@@ -1,4 +1,4 @@
-name: Deploy APP1
+name: Deploy APP1 (DEV)
 
 on:
   push:
@@ -14,37 +14,52 @@ jobs:
   deploy-app1:
     runs-on: ubuntu-latest
 
+    env:
+      ACR_NAME: acrforksdemo1
+      IMAGE_NAME: app1
+      NAMESPACE: dev
+
     steps:
+    # 1️⃣ Checkout
     - name: Checkout repository
       uses: actions/checkout@v4
 
+    # 2️⃣ Azure Login
     - name: Azure Login
       uses: azure/login@v2
       with:
         creds: ${{ secrets.AZURE_CREDENTIALS }}
 
+    # 3️⃣ Login ACR
     - name: Login to ACR
-      run: az acr login --name acrforksdemo1
+      run: az acr login --name $ACR_NAME
 
+    # 4️⃣ Build & Push image (NO CACHE)
     - name: Build & Push APP1
       run: |
         TAG=${{ github.run_number }}
 
-        docker build -f docker/Dockerfile.app1 \
-          -t acrforksdemo1.azurecr.io/app1:$TAG \
-          -t acrforksdemo1.azurecr.io/app1:latest .
+        echo "Building image with tag: $TAG"
 
-        docker push acrforksdemo1.azurecr.io/app1:$TAG
-        docker push acrforksdemo1.azurecr.io/app1:latest
+        docker build --no-cache \
+          -f docker/Dockerfile.app1 \
+          -t $ACR_NAME.azurecr.io/$IMAGE_NAME:$TAG \
+          -t $ACR_NAME.azurecr.io/$IMAGE_NAME:latest \
+          .
 
-    - name: Deploy APP1 to AKS
+        docker push $ACR_NAME.azurecr.io/$IMAGE_NAME:$TAG
+        docker push $ACR_NAME.azurecr.io/$IMAGE_NAME:latest
+
+    # 5️⃣ Deploy to AKS (DEV)
+    - name: Deploy APP1 to AKS (DEV)
       run: |
         az aks get-credentials \
           --resource-group AKSMM_group \
           --name AKSMM \
           --overwrite-existing
 
-        kubectl set image deployment/app1 \
-          app1=acrforksdemo1.azurecr.io/app1:${{ github.run_number }}
+        kubectl set image deployment/dev-app1 \
+          app1=$ACR_NAME.azurecr.io/$IMAGE_NAME:${{ github.run_number }} \
+          -n $NAMESPACE
 
-        kubectl rollout status deployment/app1
+        kubectl rollout status deployment/dev-app1 -n $NAMESPACE
