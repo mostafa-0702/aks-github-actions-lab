@@ -1,0 +1,34 @@
+name: Promote to UAT
+
+on:
+  workflow_dispatch:
+
+jobs:
+  promote-uat:
+    runs-on: ubuntu-latest
+    environment: uat   # 🔐 approval GitHub
+
+    steps:
+      - name: Azure Login
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Login to ACR
+        run: az acr login --name ${{ secrets.ACR_NAME }}
+
+      - name: Promote image DEV → UAT
+        run: |
+          docker pull ${{ secrets.ACR_NAME }}.azurecr.io/app1:${{ github.run_number }}-dev
+          docker tag  ${{ secrets.ACR_NAME }}.azurecr.io/app1:${{ github.run_number }}-dev \
+                      ${{ secrets.ACR_NAME }}.azurecr.io/app1:${{ github.run_number }}-uat
+          docker push ${{ secrets.ACR_NAME }}.azurecr.io/app1:${{ github.run_number }}-uat
+
+      - name: Deploy UAT
+        run: |
+          helm upgrade --install app1-uat helm-app1 \
+            -n uat \
+            -f helm-app1/values-uat.yaml \
+            --set image.tag=${{ github.run_number }}-uat

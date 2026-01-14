@@ -1,7 +1,10 @@
+replicaCount: 3
+
 image:
   repository: acrforksdemo1.azurecr.io/app1
-  tag: "20"
+  tag: "22"
 
 ingress:
+  enabled: true
   host: lll.one
 

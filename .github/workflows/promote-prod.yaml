@@ -1,0 +1,34 @@
+name: Promote to PROD
+
+on:
+  workflow_dispatch:
+
+jobs:
+  promote-prod:
+    runs-on: ubuntu-latest
+    environment: prod   # 🔐 approval + protection
+
+    steps:
+      - name: Azure Login
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Login to ACR
+        run: az acr login --name ${{ secrets.ACR_NAME }}
+
+      - name: Promote image UAT → PROD
+        run: |
+          docker pull ${{ secrets.ACR_NAME }}.azurecr.io/app1:${{ github.run_number }}-uat
+          docker tag  ${{ secrets.ACR_NAME }}.azurecr.io/app1:${{ github.run_number }}-uat \
+                      ${{ secrets.ACR_NAME }}.azurecr.io/app1:${{ github.run_number }}-prod
+          docker push ${{ secrets.ACR_NAME }}.azurecr.io/app1:${{ github.run_number }}-prod
+
+      - name: Deploy PROD
+        run: |
+          helm upgrade --install app1-prod helm-app1 \
+            -n prod \
+            -f helm-app1/values-prod.yaml \
+            --set image.tag=${{ github.run_number }}-prod

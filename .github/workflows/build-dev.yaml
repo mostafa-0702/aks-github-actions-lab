@@ -1,0 +1,49 @@
+name: Build & Deploy DEV
+
+on:
+  push:
+    branches:
+      - main
+
+env:
+  IMAGE_NAME: app1
+
+jobs:
+  build-dev:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Azure Login
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Login to ACR
+        run: az acr login --name ${{ secrets.ACR_NAME }}
+
+      - name: Build image
+        run: |
+          docker build -f docker/Dockerfile.app1 \
+            -t ${{ secrets.ACR_NAME }}.azurecr.io/app1:${{ github.run_number }}-dev .
+
+      - name: Push image
+        run: |
+          docker push ${{ secrets.ACR_NAME }}.azurecr.io/app1:${{ github.run_number }}-dev
+
+      - name: Set AKS context
+        uses: azure/aks-set-context@v4
+        with:
+          resource-group: RG_AKS
+          cluster-name: AKSMM
+
+      - name: Deploy DEV
+        run: |
+          helm upgrade --install app1-dev helm-app1 \
+            -n dev \
+            -f helm-app1/values-dev.yaml \
+            --set image.tag=${{ github.run_number }}-dev
