@@ -2,13 +2,23 @@ name: Promote to UAT
 
 on:
   workflow_dispatch:
+    inputs:
+      dev_image_tag:
+        description: "Tag DEV à promouvoir (ex: dev-4)"
+        required: true
+      uat_image_tag:
+        description: "Tag UAT à créer (ex: uat-4)"
+        required: true
 
 jobs:
   promote-uat:
     runs-on: ubuntu-latest
-    environment: uat   # 🔐 approval GitHub
+    environment: uat
 
     steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
       - name: Azure Login
         uses: azure/login@v2
         with:
@@ -19,14 +29,20 @@ jobs:
 
       - name: Promote image DEV → UAT
         run: |
-          docker pull ${{ secrets.ACR_NAME }}.azurecr.io/app1:${{ github.run_number }}-dev
-          docker tag  ${{ secrets.ACR_NAME }}.azurecr.io/app1:${{ github.run_number }}-dev \
-                      ${{ secrets.ACR_NAME }}.azurecr.io/app1:${{ github.run_number }}-uat
-          docker push ${{ secrets.ACR_NAME }}.azurecr.io/app1:${{ github.run_number }}-uat
+          docker pull ${{ secrets.ACR_NAME }}.azurecr.io/app1:${{ inputs.dev_image_tag }}
+          docker tag  ${{ secrets.ACR_NAME }}.azurecr.io/app1:${{ inputs.dev_image_tag }} \
+                      ${{ secrets.ACR_NAME }}.azurecr.io/app1:${{ inputs.uat_image_tag }}
+          docker push ${{ secrets.ACR_NAME }}.azurecr.io/app1:${{ inputs.uat_image_tag }}
+
+      - name: Set AKS context
+        uses: azure/aks-set-context@v4
+        with:
+          resource-group: AKSMM_group
+          cluster-name: AKSMM
 
       - name: Deploy UAT
         run: |
           helm upgrade --install app1-uat helm-app1 \
             -n uat \
             -f helm-app1/values-uat.yaml \
-            --set image.tag=${{ github.run_number }}-uat
+            --set image.tag=${{ inputs.uat_image_tag }}

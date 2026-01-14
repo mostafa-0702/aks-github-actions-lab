@@ -1,10 +1,1 @@
-replicaCount: 2
-
-image:
-  repository: acrforksdemo1.azurecr.io/app1
-  tag: "4-dev"
-
-ingress:
-  enabled: true
-  host: uat.lll.one
 

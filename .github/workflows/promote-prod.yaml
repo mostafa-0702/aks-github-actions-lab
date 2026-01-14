@@ -2,13 +2,23 @@ name: Promote to PROD
 
 on:
   workflow_dispatch:
+    inputs:
+      uat_image_tag:
+        description: "Tag UAT à promouvoir (ex: uat-4)"
+        required: true
+      prod_image_tag:
+        description: "Tag PROD à créer (ex: prod-4)"
+        required: true
 
 jobs:
   promote-prod:
     runs-on: ubuntu-latest
-    environment: prod   # 🔐 approval + protection
+    environment: prod   # 🔐 approval obligatoire
 
     steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
       - name: Azure Login
         uses: azure/login@v2
         with:
@@ -19,14 +29,20 @@ jobs:
 
       - name: Promote image UAT → PROD
         run: |
-          docker pull ${{ secrets.ACR_NAME }}.azurecr.io/app1:${{ github.run_number }}-uat
-          docker tag  ${{ secrets.ACR_NAME }}.azurecr.io/app1:${{ github.run_number }}-uat \
-                      ${{ secrets.ACR_NAME }}.azurecr.io/app1:${{ github.run_number }}-prod
-          docker push ${{ secrets.ACR_NAME }}.azurecr.io/app1:${{ github.run_number }}-prod
+          docker pull ${{ secrets.ACR_NAME }}.azurecr.io/app1:${{ inputs.uat_image_tag }}
+          docker tag  ${{ secrets.ACR_NAME }}.azurecr.io/app1:${{ inputs.uat_image_tag }} \
+                      ${{ secrets.ACR_NAME }}.azurecr.io/app1:${{ inputs.prod_image_tag }}
+          docker push ${{ secrets.ACR_NAME }}.azurecr.io/app1:${{ inputs.prod_image_tag }}
+
+      - name: Set AKS context
+        uses: azure/aks-set-context@v4
+        with:
+          resource-group: AKSMM_group
+          cluster-name: AKSMM
 
       - name: Deploy PROD
         run: |
           helm upgrade --install app1-prod helm-app1 \
             -n prod \
             -f helm-app1/values-prod.yaml \
-            --set image.tag=${{ github.run_number }}-prod
+            --set image.tag=${{ inputs.prod_image_tag }}
