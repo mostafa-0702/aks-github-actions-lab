@@ -3,7 +3,7 @@ name: Build & Deploy DEV
 on:
   push:
     branches:
-      - main
+      - master
 
 env:
   IMAGE_NAME: app1
