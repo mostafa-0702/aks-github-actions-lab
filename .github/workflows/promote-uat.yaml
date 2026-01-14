@@ -6,14 +6,17 @@ on:
       dev_image_tag:
         description: "Tag DEV à promouvoir (ex: dev-4)"
         required: true
+      uat_image_tag:
+        description: "Tag UAT à créer (ex: uat-4)"
+        required: true
 
 jobs:
   promote-uat:
     runs-on: ubuntu-latest
-    environment: uat   # 🔐 approval GitHub obligatoire
+    environment: uat
 
     steps:
-      - name: Checkout (optionnel mais propre)
+      - name: Checkout
         uses: actions/checkout@v4
 
       - name: Azure Login
@@ -28,8 +31,8 @@ jobs:
         run: |
           docker pull ${{ secrets.ACR_NAME }}.azurecr.io/app1:${{ inputs.dev_image_tag }}
           docker tag  ${{ secrets.ACR_NAME }}.azurecr.io/app1:${{ inputs.dev_image_tag }} \
-                      ${{ secrets.ACR_NAME }}.azurecr.io/app1:uat-${{ inputs.dev_image_tag##*- }}
-          docker push ${{ secrets.ACR_NAME }}.azurecr.io/app1:uat-${{ inputs.dev_image_tag##*- }}
+                      ${{ secrets.ACR_NAME }}.azurecr.io/app1:${{ inputs.uat_image_tag }}
+          docker push ${{ secrets.ACR_NAME }}.azurecr.io/app1:${{ inputs.uat_image_tag }}
 
       - name: Set AKS context
         uses: azure/aks-set-context@v4
@@ -42,4 +45,4 @@ jobs:
           helm upgrade --install app1-uat helm-app1 \
             -n uat \
             -f helm-app1/values-uat.yaml \
-            --set image.tag=uat-${{ inputs.dev_image_tag##*- }}
+            --set image.tag=${{ inputs.uat_image_tag }}
