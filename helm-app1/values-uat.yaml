@@ -1,1 +1,10 @@
+replicaCount: 2
 
+image:
+  repository: acrforksdemo1.azurecr.io/app1
+
+env: uat
+
+ingress:
+  enabled: true
+  host: uat.lll.one
