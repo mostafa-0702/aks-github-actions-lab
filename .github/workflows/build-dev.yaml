@@ -44,4 +44,4 @@ jobs:
           helm upgrade --install app1-dev helm-app1 \
             -n dev \
             -f helm-app1/values-dev.yaml \
-            --set image.tag=${{ github.run_number }}-dev
+            --set image.tag=${{ github.run_number }}-devm
