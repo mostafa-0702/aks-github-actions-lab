@@ -36,7 +36,7 @@ jobs:
       - name: Set AKS context
         uses: azure/aks-set-context@v4
         with:
-          resource-group: RG_AKS
+          resource-group: AKSMM_group
           cluster-name: AKSMM
 
       - name: Deploy DEV
