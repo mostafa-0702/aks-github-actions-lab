@@ -44,5 +44,25 @@ jobs:
         run: |
           helm upgrade --install app1-prod helm-app1 \
             -n prod \
+            --create-namespace \
             -f helm-app1/values-prod.yaml \
             --set image.tag=${{ inputs.prod_image_tag }}
+
+      # 🔽 JOURNALISATION DES RELEASES PROD 🔽
+
+      - name: Save PROD release info
+        run: |
+          echo "## PROD RELEASE" >> releases.md
+          echo "- Date (UTC): $(date -u)" >> releases.md
+          echo "- Image:" >> releases.md
+          kubectl get deployment app1-prod -n prod \
+            -o jsonpath="{.spec.template.spec.containers[0].image}" >> releases.md
+          echo "" >> releases.md
+
+      - name: Commit release log
+        run: |
+          git config user.name "github-actions"
+          git config user.email "actions@github.com"
+          git add releases.md
+          git commit -m "chore(prod): log release" || echo "No changes to commit"
+          git push
