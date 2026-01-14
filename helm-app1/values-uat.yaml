@@ -2,7 +2,7 @@ replicaCount: 2
 
 image:
   repository: acrforksdemo1.azurecr.io/app1
-  tag: "22"
+  tag: "dev-4"
 
 ingress:
   enabled: true
